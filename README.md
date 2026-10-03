@@ -1,6 +1,13 @@
 # HexEditor
 
-A hex editor for Rak, built on the primitives Rak v0.8.2 gained.
+A hex editor for Rak, built on the byte primitives Rak gained in v8.2.0 and
+released in [0.8.3](https://github.com/Louiml/Rak/releases) and
+[0.8.4](https://github.com/Louiml/Rak/releases). Use 0.8.4 or newer.
+
+(Rak's version numbering jumped from `v8.1.1` to `v0.8.3` at the point where the
+project moved to a Cargo workspace. There is no `v0.8.2` release — the `8.2.0`
+development line became `0.8.3` — so if you are matching versions against this
+README, match against `0.8.3` and `0.8.4`, not `8.2.0`.)
 
 This is the **engine and its command line**, not the GUI. The GUI is a later phase;
 everything here is the part that has to be correct first, and it is the part a GUI
