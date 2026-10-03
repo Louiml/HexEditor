@@ -1,6 +1,6 @@
 # HexEditor
 
-A hex editor for Rak, built on the primitives Rak v8.2 gained.
+A hex editor for Rak, built on the primitives Rak v0.8.2 gained.
 
 This is the **engine and its command line**, not the GUI. The GUI is a later phase;
 everything here is the part that has to be correct first, and it is the part a GUI
