@@ -1,0 +1,70 @@
+// Hex dump in Rak, on the mmap + bytes primitives.
+//
+// This is the check that the Phase 0 work delivers what a hex editor needs:
+// byte-exact reads, and `fmt` with a real width spec. Both backends must print the
+// same thing, and until three separate bugs were fixed they did not:
+//
+//   * `fmt("{:02X}")` printed `0` where it means `00`, because the spec was matched
+//     by asking whether the text contained `04X`, `08X`, `x` or `X`.
+//   * A `for` loop over bytes stopped at the first `0x00`, because the VM tested
+//     the element's truthiness instead of the loop bound.
+//   * `hex_encode` over an `mmap_slice` hex-encoded the slice's display text
+//     instead of its bytes.
+//
+// The text gutter is left out: Rak has no int-to-char conversion, so building one
+// column of glyphs from bytes needs a lookup table, and `hexedit dump` in Rust does
+// the full three-column view. What this script is here to prove is the primitives.
+//
+//   rakc run rak/dump.rak <file> [bytes_per_row]
+//   rakc vm  rak/dump.rak <file> [bytes_per_row]
+
+// `args()` is the entire argv: 0 is the backend ("run" or "vm"), 1 is this
+// script's path, so the first real argument is index 2.
+
+let args = args()
+
+if len(args) < 3 {
+  print("usage: dump.rak <file> [bytes_per_row]")
+  return 2
+}
+
+let path = args[2]
+
+let mut per_row = 16
+if len(args) >= 4 {
+  per_row = int(args[3])
+}
+
+// The mapping is the file: a read costs nothing and there is no flush.
+let m = mmap_open(path, "r")
+let n = mmap_size(m)
+
+// One row: the offset, then the bytes grouped in fours.
+fn hex_row(m, off, width, n) {
+  let mut hex = ""
+  for i in 0..width {
+    if i > 0 {
+      hex = hex + " "
+      if i % 4 == 0 {
+        hex = hex + " "
+      }
+    }
+    let idx = off + i
+    if idx >= n {
+      hex = hex + "  "
+      continue
+    }
+    hex = hex + fmt("{:02X}", m[idx])
+  }
+  return fmt("{:08X}  {}", off, hex)
+}
+
+let mut off = 0
+while off < n {
+  print(hex_row(m, off, per_row, n))
+  off = off + per_row
+}
+
+print(fmt("{} ({} bytes)", path, n))
+mmap_close(m)
+return 0

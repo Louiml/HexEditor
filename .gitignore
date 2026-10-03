@@ -1,0 +1,15 @@
+# Build output. 94 MB of it, none of it source.
+/target
+**/*.rs.bk
+
+# Editor and OS noise.
+*.swp
+*~
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Scratch files from running the examples by hand.
+*.bin
+*.tmp

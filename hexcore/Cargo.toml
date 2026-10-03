@@ -1,0 +1,18 @@
+[package]
+name = "hexcore"
+description = "Editing engine for the Rak hex editor: a document with a sparse edit overlay, hex rendering, wildcard search, undo/redo and structure decoding."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "hexcore"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hexedit"
+path = "src/bin/hexedit.rs"
+
+[dependencies]
+# Intentionally none. Everything here is std-only so the engine builds and tests
+# identically on Windows and Linux with no vendoring and no network.

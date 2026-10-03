@@ -1,0 +1,153 @@
+// Find bytes in a file from Rak: literal hex, or a wildcard for the byte you are
+// hunting, which is by definition the one you do not know.
+//
+//   rakc run rak/find.rak <file> <pattern>
+//   rakc vm  rak/find.rak <file> <pattern>
+//
+//   deadbeef      four literal bytes, spaces optional
+//   de ad be ef   the same thing
+//   7f ?? 4c 46   any byte in the second position
+//   7f?4          top nibble 7, bottom nibble 4
+//
+// `?` is one *nibble*, so a pattern is always an even number of them.
+
+// `args()` is the entire argv: 0 is the backend ("run" or "vm"), 1 is this
+// script's path, so the first real argument is index 2.
+
+let args = args()
+if len(args) < 4 {
+  print("usage: find.rak <file> <pattern>")
+  print("  hex digits, spaces optional, `?` for one nibble")
+  return 2
+}
+
+let path = args[2]
+let raw = args[3]
+
+// `int` parses decimal only, so hex digits are mapped by hand. Asking the
+// language for `int("d")` is a parse error, not a hex value.
+fn nib_of(c) {
+  if c == "0" { return 0 }
+  if c == "1" { return 1 }
+  if c == "2" { return 2 }
+  if c == "3" { return 3 }
+  if c == "4" { return 4 }
+  if c == "5" { return 5 }
+  if c == "6" { return 6 }
+  if c == "7" { return 7 }
+  if c == "8" { return 8 }
+  if c == "9" { return 9 }
+  if c == "a" { return 10 }
+  if c == "b" { return 11 }
+  if c == "c" { return 12 }
+  if c == "d" { return 13 }
+  if c == "e" { return 14 }
+  if c == "f" { return 15 }
+  if c == "A" { return 10 }
+  if c == "B" { return 11 }
+  if c == "C" { return 12 }
+  if c == "D" { return 13 }
+  if c == "E" { return 14 }
+  if c == "F" { return 15 }
+  // `?` is the wildcard: one nibble, unconstrained.
+  if c == "?" { return -1 }
+  return -2
+}
+
+fn is_blank(c) {
+  return c == " "
+}
+
+// The k-th non-blank character, counting from zero.
+fn nth(raw, k) {
+  let mut seen = 0
+  let mut i = 0
+  while i < len(raw) {
+    let c = raw[i]
+    if !is_blank(c) {
+      if seen == k {
+        return c
+      }
+      seen = seen + 1
+    }
+    i = i + 1
+  }
+  return ""
+}
+
+// Validate and count the nibbles.
+let mut count = 0
+let mut i = 0
+while i < len(raw) {
+  let c = raw[i]
+  if !is_blank(c) {
+    if nib_of(c) == -2 {
+      print("the pattern must be hex digits and `?`")
+      return 2
+    }
+    count = count + 1
+  }
+  i = i + 1
+}
+
+if count == 0 {
+  print("the pattern is empty")
+  return 2
+}
+
+// A hex pattern is a whole number of bytes, so an odd count is a mistake worth
+// naming rather than silently truncating.
+if count % 2 != 0 {
+  print("a pattern needs an even number of nibbles")
+  return 2
+}
+
+let plen = count / 2
+let m = mmap_open(path, "r")
+let n = mmap_size(m)
+
+// Does the pattern match at `at`?
+fn fits(m, at, raw, plen) {
+  for i in 0..plen {
+    let hi = nib_of(nth(raw, i * 2))
+    let lo = nib_of(nth(raw, i * 2 + 1))
+    let b = m[at + i]
+    if hi >= 0 {
+      if (b >> 4) != hi {
+        return false
+      }
+    }
+    if lo >= 0 {
+      if (b & 15) != lo {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+let limit = 256
+let mut found = 0
+let mut at = 0
+while at + plen <= n {
+  if fits(m, at, raw, plen) {
+    let mut ctx = ""
+    for i in 0..plen {
+      ctx = ctx + fmt("{:02X}", m[at + i])
+    }
+    print(fmt("{:08X}  {}", at, ctx))
+    found = found + 1
+    if found >= limit {
+      print("... stopped at the limit")
+      break
+    }
+  }
+  at = at + 1
+}
+
+if found == 0 {
+  print("no match")
+}
+
+mmap_close(m)
+return 0
